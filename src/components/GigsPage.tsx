@@ -83,7 +83,7 @@ export function GigsPage({ profile, allOpenGigs, applications, onApplyToGig, onB
               <div className="flex flex-wrap gap-2 mb-2">
                 <span className="flex items-center gap-0.5 text-[10px] text-gray-400"><DollarSign className="w-3 h-3 text-brand-500" />${gig.pay_min}-${gig.pay_max}</span>
                 <span className="flex items-center gap-0.5 text-[10px] text-gray-400"><MapPin className="w-3 h-3 text-gray-400" />{gig.campus_location || 'Campus'}</span>
-                <span className="flex items-center gap-0.5 text-[10px] text-gray-400"><Users className="w-3 h-3 text-amber-500" />{gig.applicant_count} applicant{gig.applicant_count !== 1 ? 's' : ''}</span>
+                <span className="flex items-center gap-0.5 text-[10px] text-gray-400"><Users className="w-3 h-3 text-amber-500" />{gig.accepted_by_name || 'Open'}</span>
                 <span className="flex items-center gap-0.5 text-[10px] text-gray-400"><Clock className="w-3 h-3 text-gray-400" />{new Date(gig.created_at).toLocaleDateString()}</span>
               </div>
               <div className="flex items-center gap-1.5 mb-2">

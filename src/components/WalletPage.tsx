@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { ArrowLeft, DollarSign, TrendingUp, TrendingDown, Shield, CheckCircle, AlertCircle, Clock } from 'lucide-react';
-import type { Wallet as WalletType, WalletTransaction } from '../lib/supabase';
+import type { WalletTransaction } from '../lib/supabase';
+
+type WalletLike = { balance: number } | null;
 
 type Props = {
-  wallet: WalletType | null;
+  wallet: WalletLike;
   transactions: WalletTransaction[];
   totalEscrow: number;
   onDeposit: (amount: number) => Promise<{ error: string | null | unknown }>;
@@ -33,16 +35,20 @@ export function WalletPage({ wallet, transactions, totalEscrow, onDeposit, onBac
       case 'deposit': return <TrendingUp className="w-3.5 h-3.5 text-brand-500" />;
       case 'escrow_hold': return <Shield className="w-3.5 h-3.5 text-amber-500" />;
       case 'escrow_release': return <CheckCircle className="w-3.5 h-3.5 text-blue-500" />;
-      case 'escrow_refund': return <TrendingDown className="w-3.5 h-3.5 text-cyan-500" />;
-      case 'payment_sent': return <TrendingDown className="w-3.5 h-3.5 text-red-500" />;
-      case 'payment_received': return <TrendingUp className="w-3.5 h-3.5 text-brand-500" />;
+      case 'earning': return <TrendingUp className="w-3.5 h-3.5 text-brand-500" />;
+      case 'refund': return <TrendingDown className="w-3.5 h-3.5 text-cyan-500" />;
+      case 'withdrawal': return <TrendingDown className="w-3.5 h-3.5 text-red-500" />;
     }
   };
 
   const typeLabel: Record<WalletTransaction['type'], string> = {
     deposit: 'Deposit', escrow_hold: 'Escrow Held', escrow_release: 'Escrow Released',
-    escrow_refund: 'Refund', payment_sent: 'Payment Sent', payment_received: 'Payment Received',
+    refund: 'Refund', withdrawal: 'Withdrawal', earning: 'Earning',
   };
+
+  // Positive amounts shown with +, escrow_release is neutral (no prefix), others are -
+  const isPositiveType = (type: WalletTransaction['type']) => type === 'deposit' || type === 'earning' || type === 'refund';
+  const isNeutralType = (type: WalletTransaction['type']) => type === 'escrow_release';
 
   return (
     <div className="h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
@@ -98,8 +104,8 @@ export function WalletPage({ wallet, transactions, totalEscrow, onDeposit, onBac
                     <div className="w-7 h-7 bg-gray-50 dark:bg-gray-700 rounded-md flex items-center justify-center flex-shrink-0">{typeIcon(tx.type)}</div>
                     <div className="flex-1 min-w-0"><p className="text-xs text-gray-900 dark:text-white font-medium">{typeLabel[tx.type]}</p><p className="text-[10px] text-gray-400 truncate">{tx.description}</p></div>
                     <div className="text-right flex-shrink-0">
-                      <p className={`text-xs font-semibold ${tx.type === 'deposit' || tx.type === 'payment_received' || tx.type === 'escrow_refund' ? 'text-brand-600 dark:text-brand-400' : tx.type === 'escrow_release' ? 'text-gray-500 dark:text-gray-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                        {tx.type === 'deposit' || tx.type === 'payment_received' || tx.type === 'escrow_refund' ? '+' : tx.type === 'escrow_release' ? '' : '-'}${tx.amount.toFixed(2)}
+                      <p className={`text-xs font-semibold ${isPositiveType(tx.type) ? 'text-brand-600 dark:text-brand-400' : isNeutralType(tx.type) ? 'text-gray-500 dark:text-gray-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                        {isPositiveType(tx.type) ? '+' : isNeutralType(tx.type) ? '' : '-'}${tx.amount.toFixed(2)}
                       </p>
                       <p className="text-[10px] text-gray-300 dark:text-gray-600">{new Date(tx.created_at).toLocaleDateString()}</p>
                     </div>

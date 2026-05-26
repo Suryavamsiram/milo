@@ -52,6 +52,7 @@ export function OnboardingWizard({ onComplete }: Props) {
       name: name.trim(), role, campus_location: location.trim(), max_walk_time_mins: walkTime,
       pay_min: payMin, pay_max: payMax, skills_interests: skills, onboarding_complete: true,
       avatar_url: null, bio: '', latitude: null, longitude: null, skills: [], availability: 'flexible',
+      email: '', auth_user_id: null, balance: 100, total_earned: 0, total_spent: 0,
     });
   };
 

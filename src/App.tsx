@@ -46,7 +46,7 @@ function App() {
     if (result.error) return { error: result.error.message };
     return { error: null };
   };
-  const handleSaveGig = async (gig: Omit<Gig, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'applicant_count'>) => {
+  const handleSaveGig = async (gig: Omit<Gig, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'accepted_by_user_id' | 'accepted_by_name' | 'started_at' | 'completed_at' | 'contractor_marked_complete' | 'redeems_requested'>) => {
     return saveGig(gig);
   };
 
@@ -226,7 +226,7 @@ function App() {
                   : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
               }`}>
               <MessageSquare className="w-3 h-3" />
-              {s.title}
+              {s.session_name}
               <span onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
                 className="ml-1 text-gray-300 dark:text-gray-600 hover:text-red-400 transition-colors text-[10px]">x</span>
             </button>
