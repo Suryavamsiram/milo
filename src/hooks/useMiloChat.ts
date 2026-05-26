@@ -54,6 +54,19 @@ function dbMessageToEntry(msg: ChatMessage): ChatEntry {
   };
 }
 
+/** Normalize a matched_user_id to mock-N format if it corresponds to a mock profile name. */
+function normalizeMockUserId(matchedUserName: string, rawMatchedUserId: string): string {
+  // If already in mock-N format, return as-is
+  if (rawMatchedUserId.startsWith('mock-')) return rawMatchedUserId;
+  // Otherwise look up by name
+  const mockIdx = MOCK_PROFILES.findIndex((p) =>
+    matchedUserName && p.name && matchedUserName.startsWith(p.name)
+  );
+  if (mockIdx !== -1) return `mock-${mockIdx}`;
+  // Not a mock profile — return the original ID
+  return rawMatchedUserId;
+}
+
 export function useMiloChat({
   profile,
   userId,
@@ -148,13 +161,13 @@ export function useMiloChat({
         if (activeHeldMatch) {
           setIsThinking(true);
           await onFinishAndPay(activeHeldMatch.id);
-          
+
           if (activeRole === 'worker') {
             agentSay(`Payment processed completely! **$${activeHeldMatch.pay_max}** has arrived safely in your account balance from ${activeHeldMatch.matched_user_name}.`, 'status');
           } else {
             agentSay(`Payment complete! $${activeHeldMatch.pay_max} released out of your escrow holding to ${activeHeldMatch.matched_user_name}.`, 'status');
           }
-          
+
           setIsThinking(false);
           return;
         }
@@ -202,7 +215,7 @@ export function useMiloChat({
           messages: historicalMessages,
           user_profile: {
             user_id: userId,
-            role: profile.role || 'both', // Send the raw profile role, Mistral handles 'both' natively
+            role: profile.role || 'both',
             location: profile.campus_location || 'Main Campus',
             max_walk_time_mins: profile.max_walk_time_mins || 15,
             payment_range: {
@@ -233,27 +246,39 @@ export function useMiloChat({
         agentSay(serverMessage, 'text');
 
         if (Array.isArray(data.matches) && data.matches.length > 0) {
-          const resolvedGigId = crypto.randomUUID();
-          const isWorker = actionDirective === 'search_gigs';
+          // First, create a real gig row in the DB so the FK constraint on gig_matches passes.
+          const topMatch = data.matches[0];
+          const gigResult = await onSaveGig({
+            type: actionDirective === 'search_gigs' ? 'search' : 'post',
+            title: topMatch.title || 'Campus Gig',
+            content: topMatch.description || `Gig from Milo match session`,
+            category: topMatch.category || 'Other',
+            pay_min: topMatch.pay_min ?? profile.pay_min ?? 10,
+            pay_max: topMatch.pay_max ?? profile.pay_max ?? 50,
+            currency: 'USD',
+            campus_location: topMatch.campus_location || profile.campus_location || 'Main Campus',
+            is_remote: false,
+            poster_name: profile.name,
+            status: 'open',
+            escrow_held: false,
+            escrow_amount: 0,
+            escrow_released: false,
+            webhook_payload: null,
+          });
+
+          // Use the real gig ID from the database, or fall back to a UUID if insert failed
+          const resolvedGigId = gigResult.data?.id ?? crypto.randomUUID();
 
           const compiledMatches: GigMatch[] = data.matches.map((m: any) => {
-            // Normalize matched_user_id to mock-N format so demo dashboard can find it
-            let normalizedMatchedUserId: string = m.matched_user_id || '';
-            const mockIdx = MOCK_PROFILES.findIndex((p) =>
-              m.matched_user_name && p.name && m.matched_user_name.startsWith(p.name)
-            );
-            if (mockIdx !== -1) {
-              normalizedMatchedUserId = `mock-${mockIdx}`;
-            }
+            const normalizedMatchedUserId = normalizeMockUserId(m.matched_user_name || '', m.matched_user_id || '');
 
             return {
               ...m,
               gig_id: m.gig_id || resolvedGigId,
               matched_user_id: normalizedMatchedUserId,
-              // For worker role: the user_id on the match is the poster's ID,
-              // and matched_user_id is the worker (mock profile).
-              // For finder role: the user_id is the current user (poster).
-              user_id: isWorker ? userId : userId,
+              // user_id is always the poster/current user — matches are stored under their row
+              // so they can query them back and the demo dashboard can find them
+              user_id: userId,
               decision: m.decision ?? null,
               escrow_status: m.escrow_status ?? 'pending',
               pay_max: m.pay_max ?? profile.pay_max ?? 50,
@@ -301,7 +326,7 @@ export function useMiloChat({
       onPersistMessage,
       agentSay,
       onFinishAndPay,
-      activeRole, // Included in dependencies so it resolves correctly
+      activeRole,
     ]
   );
 
@@ -309,8 +334,7 @@ export function useMiloChat({
     async (matchId: string, allMatches: GigMatch[]) => {
       await onUpdateMatchDecision(matchId, 'accepted');
       const targetMatch = allMatches.find((m) => m.id === matchId);
-      
-      // Copy dynamically updates based on the current active chat session!
+
       if (activeRole === 'worker') {
         agentSay(
           targetMatch
@@ -341,7 +365,7 @@ export function useMiloChat({
     async (matchId: string, allMatches: GigMatch[]) => {
       await onReleaseEscrow(matchId);
       const targetMatch = allMatches.find((m) => m.id === matchId);
-      
+
       if (activeRole === 'worker') {
         agentSay(targetMatch ? `Funds released! **$${targetMatch.pay_max}** has been deposited to your account.` : 'Escrow contract settled successfully.', 'status');
       } else {
@@ -355,7 +379,7 @@ export function useMiloChat({
     async (matchId: string, allMatches: GigMatch[]) => {
       await onFinishAndPay(matchId);
       const targetMatch = allMatches.find((m) => m.id === matchId);
-      
+
       if (activeRole === 'worker') {
         agentSay(
           targetMatch

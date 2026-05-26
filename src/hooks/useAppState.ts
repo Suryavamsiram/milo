@@ -258,8 +258,11 @@ export function useAppState() {
 
   const saveMatches = useCallback(async (gigId: string, incomingMatches: GigMatch[]) => {
     if (!userId) return;
-    const rows = incomingMatches.map((m) => ({ ...m, gig_id: m.gig_id || gigId, user_id: userId }));
-    await supabase.from('gig_matches').insert(rows);
+    const rows = incomingMatches.map((m) => ({ ...m, gig_id: m.gig_id || gigId }));
+    const { error } = await supabase.from('gig_matches').insert(rows);
+    if (error) {
+      console.warn('Failed to insert matches:', error);
+    }
     setMatches((prev) => [...incomingMatches, ...prev]);
   }, [userId]);
 
