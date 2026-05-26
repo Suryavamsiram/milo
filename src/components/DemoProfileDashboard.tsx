@@ -24,8 +24,14 @@ export function DemoProfileDashboard({ profileIdx, matches, posterProfile, onBac
   useEffect(() => subscribeDemoStore(setDemoState), []);
 
   // Filter matches that target this mock profile.
+  // Match by ID (mock-N format) or by name fallback for legacy data.
   const ownMatches = matches
-    .filter((m) => m.matched_user_id === mockUserId)
+    .filter((m) => {
+      if (m.matched_user_id === mockUserId) return true;
+      // Fallback: check if the matched user name starts with this profile's name
+      if (m.matched_user_name && m.matched_user_name.startsWith(profile.name)) return true;
+      return false;
+    })
     .map((m) => ({ ...m, posterName: posterProfile?.name ?? 'Poster' }));
 
   const walletBalance = getDemoWallet(profile.name);

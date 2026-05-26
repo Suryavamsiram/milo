@@ -3,7 +3,7 @@ import type { UserProfile, Gig, GigMatch, ChatMessage } from '../lib/supabase';
 import type { ConversationPhase } from '../lib/miloAgent';
 import { getMiloGreeting } from '../lib/miloAgent';
 import { supabase } from '../lib/supabase';
-import { MATCH_ENDPOINT } from '../lib/webhook';
+import { MATCH_ENDPOINT, MOCK_PROFILES } from '../lib/webhook';
 
 export type ChatEntry = {
   id: string;
@@ -234,16 +234,33 @@ export function useMiloChat({
 
         if (Array.isArray(data.matches) && data.matches.length > 0) {
           const resolvedGigId = crypto.randomUUID();
-          const compiledMatches: GigMatch[] = data.matches.map((m: any) => ({
-            ...m,
-            gig_id: m.gig_id || resolvedGigId,
-            user_id: userId, 
-            decision: m.decision ?? null,
-            escrow_status: m.escrow_status ?? 'pending',
-            pay_max: m.pay_max ?? profile.pay_max ?? 50,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }));
+          const isWorker = actionDirective === 'search_gigs';
+
+          const compiledMatches: GigMatch[] = data.matches.map((m: any) => {
+            // Normalize matched_user_id to mock-N format so demo dashboard can find it
+            let normalizedMatchedUserId: string = m.matched_user_id || '';
+            const mockIdx = MOCK_PROFILES.findIndex((p) =>
+              m.matched_user_name && p.name && m.matched_user_name.startsWith(p.name)
+            );
+            if (mockIdx !== -1) {
+              normalizedMatchedUserId = `mock-${mockIdx}`;
+            }
+
+            return {
+              ...m,
+              gig_id: m.gig_id || resolvedGigId,
+              matched_user_id: normalizedMatchedUserId,
+              // For worker role: the user_id on the match is the poster's ID,
+              // and matched_user_id is the worker (mock profile).
+              // For finder role: the user_id is the current user (poster).
+              user_id: isWorker ? userId : userId,
+              decision: m.decision ?? null,
+              escrow_status: m.escrow_status ?? 'pending',
+              pay_max: m.pay_max ?? profile.pay_max ?? 50,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+          });
 
           await onSaveMatches(resolvedGigId, compiledMatches);
 

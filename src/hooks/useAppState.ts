@@ -524,27 +524,79 @@ export function useAppState() {
     }]);
   }, [matches]);
 
-  // Poster finishes & releases payment to the demo profile's wallet.
+  // Poster finishes & releases payment to the worker's wallet.
   const finishAndPayMatch = useCallback(async (matchId: string) => {
     const match = matches.find((m) => m.id === matchId);
     if (!match || !wallet) return;
+
     // Credit the demo (mock) profile's wallet locally
     adjustDemoWallet(match.matched_user_name, match.pay_max);
+
     // Mark match released, gig completed
     await supabase.from('gig_matches').update({ escrow_status: 'released' }).eq('id', matchId);
     setMatches((prev) => prev.map((m) => m.id === matchId ? { ...m, escrow_status: 'released' } : m));
     await supabase.from('gigs').update({ status: 'completed', escrow_released: true }).eq('id', match.gig_id);
     setActiveGigs((prev) => prev.map((g) => g.id === match.gig_id ? { ...g, status: 'completed', escrow_released: true } : g));
-    // Log a wallet transaction
-    const { data: tx } = await supabase.from('wallet_transactions').insert([{
-      wallet_id: wallet.id,
-      user_id: userId,
-      type: 'escrow_release',
-      amount: match.pay_max,
-      reference_id: match.gig_id,
-      description: `Paid ${match.matched_user_name} for ${match.title}`,
-    }]).select().single();
-    if (tx) setTransactions((prev) => [tx as WalletTransaction, ...prev]);
+
+    // If the current user is the poster (escrow was held from their wallet previously),
+    // log an escrow_release transaction (the money was already deducted during hold).
+    // This is informational — the balance already reflects the hold.
+    if (match.user_id === userId) {
+      const { data: tx } = await supabase.from('wallet_transactions').insert([{
+        wallet_id: wallet.id,
+        user_id: userId,
+        type: 'escrow_release',
+        amount: match.pay_max,
+        reference_id: match.gig_id,
+        description: `Paid ${match.matched_user_name} for ${match.title}`,
+      }]).select().single();
+      if (tx) setTransactions((prev) => [tx as WalletTransaction, ...prev]);
+    }
+
+    // Credit the worker's wallet — if the worker is a mock profile, adjustDemoWallet
+    // already handled it. If the worker is the current real user (e.g. they found a gig),
+    // credit their real wallet with a payment_received transaction.
+    const matchedUserIsMock = match.matched_user_id.startsWith('mock-');
+    if (!matchedUserIsMock && match.matched_user_id === userId) {
+      // The current user is the worker who earned this money
+      const earnedAmount = match.pay_max;
+      const newBalance = wallet.balance + earnedAmount;
+      await supabase.from('wallets').update({ balance: newBalance }).eq('id', wallet.id);
+      const { data: earnedTx } = await supabase.from('wallet_transactions').insert([{
+        wallet_id: wallet.id,
+        user_id: userId,
+        type: 'payment_received',
+        amount: earnedAmount,
+        reference_id: match.gig_id,
+        description: `Earned $${earnedAmount.toFixed(2)} from ${match.title}`,
+      }]).select().single();
+      setWallet((prev) => prev ? { ...prev, balance: newBalance } : prev);
+      if (earnedTx) setTransactions((prev) => [earnedTx as WalletTransaction, ...prev]);
+    } else if (!matchedUserIsMock) {
+      // The worker is another real user — credit their wallet
+      const { data: workerWallet } = await supabase.from('wallets').select('*').eq('user_id', match.matched_user_id).maybeSingle();
+      if (workerWallet) {
+        const ww = workerWallet as Wallet;
+        const newBalance = ww.balance + match.pay_max;
+        await supabase.from('wallets').update({ balance: newBalance }).eq('id', ww.id);
+        await supabase.from('wallet_transactions').insert([{
+          wallet_id: ww.id,
+          user_id: match.matched_user_id,
+          type: 'payment_received',
+          amount: match.pay_max,
+          reference_id: match.gig_id,
+          description: `Earned $${match.pay_max.toFixed(2)} from ${match.title}`,
+        }]);
+        await supabase.from('notifications').insert([{
+          user_id: match.matched_user_id,
+          type: 'payment_received',
+          title: 'Payment Received',
+          body: `You earned $${match.pay_max.toFixed(2)} for completing "${match.title}".`,
+          reference_id: match.gig_id,
+        }]);
+      }
+    }
+
     setDemoMatchExtras(matchId, { contractor_decision: 'paid' });
   }, [matches, wallet, userId]);
 

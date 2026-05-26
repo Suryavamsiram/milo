@@ -98,8 +98,8 @@ export function WalletPage({ wallet, transactions, totalEscrow, onDeposit, onBac
                     <div className="w-7 h-7 bg-gray-50 dark:bg-gray-700 rounded-md flex items-center justify-center flex-shrink-0">{typeIcon(tx.type)}</div>
                     <div className="flex-1 min-w-0"><p className="text-xs text-gray-900 dark:text-white font-medium">{typeLabel[tx.type]}</p><p className="text-[10px] text-gray-400 truncate">{tx.description}</p></div>
                     <div className="text-right flex-shrink-0">
-                      <p className={`text-xs font-semibold ${tx.type === 'deposit' || tx.type === 'payment_received' || tx.type === 'escrow_refund' ? 'text-brand-600 dark:text-brand-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                        {tx.type === 'deposit' || tx.type === 'payment_received' || tx.type === 'escrow_refund' ? '+' : '-'}${tx.amount.toFixed(2)}
+                      <p className={`text-xs font-semibold ${tx.type === 'deposit' || tx.type === 'payment_received' || tx.type === 'escrow_refund' ? 'text-brand-600 dark:text-brand-400' : tx.type === 'escrow_release' ? 'text-gray-500 dark:text-gray-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                        {tx.type === 'deposit' || tx.type === 'payment_received' || tx.type === 'escrow_refund' ? '+' : tx.type === 'escrow_release' ? '' : '-'}${tx.amount.toFixed(2)}
                       </p>
                       <p className="text-[10px] text-gray-300 dark:text-gray-600">{new Date(tx.created_at).toLocaleDateString()}</p>
                     </div>
