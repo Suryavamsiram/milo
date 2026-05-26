@@ -20,7 +20,7 @@ type UseMiloChatOptions = {
   userId: string;
   sessionId: string | null;
   matches: GigMatch[];
-  onSaveGig: (gig: Omit<Gig, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'accepted_by_user_id' | 'accepted_by_name' | 'started_at' | 'completed_at' | 'contractor_marked_complete' | 'redeems_requested'>) => Promise<{ data: Gig | null; error: unknown }>;
+  onSaveGig: (gig: Omit<Gig, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'applicant_count'>) => Promise<{ data: Gig | null; error: unknown }>;
   onSaveMatches: (gigId: string, matches: GigMatch[]) => Promise<void>;
   onUpdateMatchDecision: (matchId: string, decision: 'accepted' | 'rejected') => Promise<void>;
   onReleaseEscrow: (matchId: string) => Promise<void>;

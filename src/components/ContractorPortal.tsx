@@ -87,7 +87,7 @@ export function ContractorPortal({ profile, activeGigs, matches, wallet, notific
                   <CheckCircle className="w-3 h-3" /> Pending Your Approval
                 </h3>
                 {pendingApprovalNotifs.map((notif) => {
-                  const gigId = (notif.data?.gig_id as string) || '';
+                  const gigId = notif.reference_id || '';
                   const gig = activeGigs.find((g) => g.id === gigId);
                   const match = acceptedMatches.find((m) => m.gig_id === gigId);
                   if (!gig || !match) return null;
@@ -97,7 +97,7 @@ export function ContractorPortal({ profile, activeGigs, matches, wallet, notific
                         <CheckCircle className="w-3.5 h-3.5 text-amber-500" />
                         <h4 className="text-sm text-gray-900 dark:text-white font-medium">{gig.title}</h4>
                       </div>
-                      <p className="text-[11px] text-gray-500 mb-2">{notif.message}</p>
+                      <p className="text-[11px] text-gray-500 mb-2">{notif.body}</p>
                       <div className="flex items-center gap-1.5 mb-2">
                         <Shield className="w-3 h-3 text-amber-500" />
                         <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Escrow: ${gig.escrow_amount.toFixed(2)}</span>

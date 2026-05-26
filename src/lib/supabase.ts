@@ -24,11 +24,6 @@ export type UserProfile = {
   availability: 'flexible' | 'mornings' | 'afternoons' | 'evenings' | 'weekends_only';
   created_at: string;
   updated_at: string;
-  auth_user_id: string | null;
-  email: string;
-  balance: number;
-  total_earned: number;
-  total_spent: number;
 };
 
 export type Gig = {
@@ -49,14 +44,9 @@ export type Gig = {
   escrow_amount: number;
   escrow_released: boolean;
   webhook_payload: Record<string, unknown> | null;
+  applicant_count: number;
   created_at: string;
   updated_at: string;
-  accepted_by_user_id: string | null;
-  accepted_by_name: string;
-  started_at: string | null;
-  completed_at: string | null;
-  contractor_marked_complete: boolean;
-  redeems_requested: number;
 };
 
 export type MatchReasoning = {
@@ -84,8 +74,6 @@ export type GigMatch = {
   escrow_status: 'pending' | 'held' | 'released' | 'disputed';
   created_at: string;
   updated_at: string;
-  contractor_accepted: boolean;
-  contractor_accepted_at: string | null;
 };
 
 export type ChatMessage = {
@@ -102,20 +90,26 @@ export type ChatMessage = {
 export type ChatSession = {
   id: string;
   user_id: string;
-  session_name: string;
+  title: string;
   created_at: string;
   updated_at: string;
-  is_active: boolean;
+};
+
+export type Wallet = {
+  id: string;
+  user_id: string;
+  balance: number;
+  created_at: string;
+  updated_at: string;
 };
 
 export type WalletTransaction = {
   id: string;
+  wallet_id: string;
   user_id: string;
-  type: 'deposit' | 'withdrawal' | 'escrow_hold' | 'escrow_release' | 'earning' | 'refund';
+  type: 'deposit' | 'escrow_hold' | 'escrow_release' | 'escrow_refund' | 'payment_sent' | 'payment_received';
   amount: number;
   reference_id: string | null;
-  reference_type: 'gig' | 'match' | 'deposit' | null;
-  status: 'pending' | 'completed' | 'failed' | 'refunded';
   description: string;
   created_at: string;
 };
@@ -141,10 +135,10 @@ export type GigApplication = {
 export type Notification = {
   id: string;
   user_id: string;
-  type: string;
+  type: 'gig_match' | 'gig_application' | 'application_accepted' | 'application_rejected' | 'escrow_held' | 'escrow_released' | 'escrow_refund' | 'payment_received' | 'gig_completed' | 'gig_completion_pending' | 'gig_redo';
   title: string;
-  message: string;
-  data: Record<string, unknown>;
-  read: boolean;
+  body: string;
+  reference_id: string | null;
+  is_read: boolean;
   created_at: string;
 };

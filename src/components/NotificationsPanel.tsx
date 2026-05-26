@@ -54,22 +54,22 @@ export function NotificationsPanel({ notifications, unreadCount, onMarkRead, onM
             notifications.map((notif) => {
               const config = typeConfig[notif.type];
               return (
-                <div key={notif.id} onClick={() => { if (!notif.read) onMarkRead(notif.id); }}
+                <div key={notif.id} onClick={() => { if (!notif.is_read) onMarkRead(notif.id); }}
                   className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-all ${
-                    notif.read ? 'bg-gray-50/50 dark:bg-gray-800/20 border-gray-100 dark:border-gray-800' : 'bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-700'
+                    notif.is_read ? 'bg-gray-50/50 dark:bg-gray-800/20 border-gray-100 dark:border-gray-800' : 'bg-white dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-700'
                   }`}>
                   <div className={`w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 ${config.color}`}>{config.icon}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <h4 className="text-xs font-medium text-gray-900 dark:text-white">{notif.title}</h4>
-                      {!notif.read && <div className="w-1.5 h-1.5 rounded-full bg-brand-500" />}
+                      {!notif.is_read && <div className="w-1.5 h-1.5 rounded-full bg-brand-500" />}
                     </div>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">{notif.message}</p>
-                    {notif.type === 'gig_completion_pending' && (notif.data as Record<string,string>)?.gig_id && (onApprovePayment || onRequestRedo) && (
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">{notif.body}</p>
+                    {notif.type === 'gig_completion_pending' && notif.reference_id && (onApprovePayment || onRequestRedo) && (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {onApprovePayment && (
                           <button
-                            onClick={(e) => { e.stopPropagation(); onApprovePayment(notif.data?.gig_id as string); }}
+                            onClick={(e) => { e.stopPropagation(); onApprovePayment(notif.reference_id!); }}
                             className="px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-[10px] font-semibold rounded-md transition-colors"
                           >
                             Finish & Pay
@@ -77,7 +77,7 @@ export function NotificationsPanel({ notifications, unreadCount, onMarkRead, onM
                         )}
                         {onRequestRedo && (
                           <button
-                            onClick={(e) => { e.stopPropagation(); onRequestRedo(notif.data?.gig_id as string); }}
+                            onClick={(e) => { e.stopPropagation(); onRequestRedo(notif.reference_id!); }}
                             className="px-2.5 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] font-semibold rounded-md transition-colors"
                           >
                             Request Redo
